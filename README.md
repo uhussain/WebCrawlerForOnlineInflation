@@ -16,18 +16,20 @@ inflation for different products and set plans for the future accordingly. A sam
 the results is temporarily displayed at [visual](somevisualization). A recording of the WebUI is also available [here](X). 
 
 # Pipeline
-The data was ingested from Amazon S3 and Apache Airflow was used for scheduling the batch processing tasks corresponding to each month of the Common Crawl data. 
-Then Apache Spark is used to process and aggregate the data and finally Apache Zeppelin is used to gain insights from the processed data in a user-friendly way.
+The data will be ingested from Amazon S3 and AWS Steps will be used for scheduling the batch processing tasks corresponding to each month of the Common Crawl data. 
+Then Apache Spark will be used to process and aggregate the data in parquet files and finally Apache Zeppelin will be used to gain insights from the processed 
+data in a user-friendly way.
 
 # Requirements
 
 Languages 
+* Bash
 * Python 3.7
 * Scala 2.11.8
 
 Technologies
 * Spark
-* Airflow 
+* AWS Steps/Airflow (Undecided) 
 * Zeppelin
 
 Third-Party Libraries
