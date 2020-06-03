@@ -2,17 +2,13 @@ import requests
 import argparse
 import time
 import json
-import StringIO
+from io import StringIO,BytesIO
 import gzip
 import csv
 import codecs
 
 from bs4 import BeautifulSoup
 
-#this is a hack to force the use of UTF-8 character encoding to keep the csv module happy when we are outputting results to our spreadsheet.
-import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 #here we are just parsing out our command line arguments and storing the result in our domain variable.
 # parse the command line arguments
@@ -33,11 +29,11 @@ def search_domain(domain):
 
     record_list = []
     
-    print "[*] Trying target domain: %s" % domain
+    print ("[*] Trying target domain: %s" % domain)
     
     for index in index_list:
         
-        print "[*] Trying index %s" % index
+        print ("[*] Trying index %s" % index)
         
         cc_url  = "http://index.commoncrawl.org/CC-MAIN-%s-index?" % index
         cc_url += "url=%s&matchType=domain&output=json" % domain
@@ -51,10 +47,10 @@ def search_domain(domain):
             for record in records:
                 record_list.append(json.loads(record))
             
-            print "[*] Added %d results." % len(records)
+            print ("[*] Added %d results." % len(records))
             
     
-    print "[*] Found a total of %d hits." % len(record_list)
+    print ("[*] Found a total of %d hits." % len(record_list))
     
     return record_list        
 
@@ -73,10 +69,13 @@ def access_page(record):
     
     # We can then use the Range header to ask for just this set of bytes
     resp = requests.get(prefix + record['filename'], headers={'Range': 'bytes={}-{}'.format(offset, offset_end)})
-    
+    print(resp.content) 
     # The page is stored compressed (gzip) to save space
     # We can extract it using the GZIP library
-    raw_data = StringIO.StringIO(resp.content)
+    #raw_data = StringIO(resp.content)
+    #bytes
+    raw_data = StringIO(resp.content)
+    print(raw_data)
     f = gzip.GzipFile(fileobj=raw_data)
     
     # What we have now is just the WARC response, formatted:
@@ -112,7 +111,7 @@ def extract_external_links(html_content,link_list):
                 
                 if domain not in href:
                     if href not in link_list and href.startswith("http"):
-                        print "[*] Discovered external link: %s" % href
+                        print ("[*] Discovered external link: %s" % href)
                         link_list.append(href)
 
     return link_list
@@ -127,12 +126,12 @@ for record in record_list:
     
     html_content =  access_page(record)
     
-    print "[*] Retrieved %d bytes for %s" % (len(html_content),record['url'])
+    print ("[*] Retrieved %d bytes for %s" % (len(html_content),record['url']))
     
     link_list = extract_external_links(html_content,link_list)
     
 
-print "[*] Total external links discovered: %d" % len(link_list)
+print ("[*] Total external links discovered: %d" % len(link_list))
 
 with codecs.open("%s-links.csv" % domain,"wb",encoding="utf-8") as output:
 
