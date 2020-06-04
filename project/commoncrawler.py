@@ -6,8 +6,10 @@ from io import StringIO,BytesIO
 import gzip
 import csv
 import codecs
-
+from selectorlib import Extractor
 from bs4 import BeautifulSoup
+import re
+from warcio.archiveiterator import ArchiveIterator
 
 #Usage
 #python project/commoncrawler.py -d https://insightfellows.com/
@@ -35,9 +37,8 @@ def search_domain(domain):
         print ("[*] Trying index %s" % index)
         cc_url  = "http://index.commoncrawl.org/CC-MAIN-%s-index?" % index
         cc_url += "url=%s&matchType=domain&output=json" % domain
-        
         response = requests.get(cc_url)
-        
+        print("responseStatus: ",response.status_code) 
         if response.status_code == 200:
             records = response.content.splitlines()
             for record in records:
@@ -52,7 +53,8 @@ def search_domain(domain):
 #
 
 def download_page(record):
-
+    if record['status']!='200':
+        return
     offset, length = int(record['offset']), int(record['length'])
     offset_end = offset + length - 1
     
@@ -60,14 +62,15 @@ def download_page(record):
     # Getting the file on S3 is equivalent however - you can request a Range
     prefix = 'https://commoncrawl.s3.amazonaws.com/'
     #print(prefix + record['filename']) 
+    print("Status: ",record['status'])
     # We can then use the Range header to ask for just this set of bytes
     resp = requests.get(prefix + record['filename'], headers={'Range': 'bytes={}-{}'.format(offset, offset_end)},stream=True)
-
+    #cc_url = "https://commoncrawl.s3.amazonaws.com/crawl-data/CC-MAIN-2020-16/segments/1585370490497.6/warc/CC-MAIN-20200328074047-20200328104047-00000.warc.gz"
+    #resp = requests.get(cc_url)
     # The page is stored compressed (gzip) to save space
     # We can extract it using the GZIP library
     raw_data= BytesIO(resp.raw.read())
     f = gzip.GzipFile(fileobj=raw_data)
-
     # What we have now is just the WARC response, formatted:
     data = f.read()
     response = ""
@@ -75,23 +78,46 @@ def download_page(record):
     #print(warc_input)
     if len(warc_input):
         #try:
-        print("Does it go here?")
+        #print("Does it go here?")
         warc, header, response = warc_input.split('\r\n', 2)
             #warc, response = warc_input.strip().split('\r\n\r\n', 2)
         #except:
            # pass
     print("warc: ", warc)
     print("header: ", header)
-    print("response: ",response)
-    return response
+    #print("response: ",response)
+    target_url = response.split("WARC-Target-URI: ")[1].split("\n")
+    try:
+        status = re.search('HTTP/1.1(.+?)\n',response).group(1)
+        if '200' in status:
+            print("status: ",status)
+            return response
+    except: 
+        status=''
+        return
 
+    ########################WARC Iterator#########
+    """
+    response="" 
+    for record in ArchiveIterator(resp.raw, arc2warc=True):
+        if record.rec_type == 'warcinfo':
+            print(record.raw_stream.read())
+
+        elif record.rec_type == 'response':
+            if record.http_headers.get_header('Content-Type') == 'text/html':
+                print(record.rec_headers.get_header('WARC-Target-URI'))
+                response = record.content_stream().read()
+                #print(record.content_stream().read())
+                #print('')
+    return response
+   """
 #
 # Extract links from the HTML  
 #
 def extract_external_links(html_content,link_list):
 
     parser = BeautifulSoup(html_content,"html.parser")
-        
+       
     links = parser.find_all("a")
     
     if links:
@@ -108,29 +134,88 @@ def extract_external_links(html_content,link_list):
 
     return link_list
 
+def extract_product_data(html_content):
 
+    # Create an Extractor by reading from the YAML file
+    #e = Extractor.from_yaml_file('PokemonShop.yml')
+    soup = BeautifulSoup(html_content,"html.parser")
+    #print(soup.prettify())
 
+    title=""
+    if soup.select("#productTitle"):
+        title = soup.select("#productTitle")[0].get_text().strip()
+    #product_info.append(title)
+    price=""
+    if soup.select("#priceblock_saleprice"):
+        price = soup.select("#priceblock_saleprice")[0].get_text()
+    elif soup.select("#priceblock_ourprice"):
+        price = soup.select("#priceblock_ourprice")[0].get_text()
+    return title,price
+    #print(data)
+    #return title
 
-record_list = search_domain(domain)
-link_list   = []
+def record_status_bad(record_dict):
+    if record_dict['status']=='200':
+        return True
+
+def record_is_product(record_dict):
+    if '/dp/' in record_dict['url']:
+        return True
+
+#Check for bad status
+initial_record_list = search_domain(domain)
+cleaned_record_list = list(filter(record_status_bad,initial_record_list))
+
+#Check for product pages
+record_list = list(filter(record_is_product,cleaned_record_list))
+
+print("Total pages with products: ",len(record_list))
+
+with open('AmazonProducts.json','w') as outfile:
+    #for url in urllist.read().splitlines():
+        #data = scrape(url) 
+        #print("data: ",data)
+    for i in range(len(record_list)):
+        record = record_list[i]
+        html_content =  download_page(record)
+        if html_content is None:
+            continue
+        title,price = extract_product_data(html_content)
+        url = record['url']
+        #Because I want to see all products with "dp" in their url
+        if url:
+            #title = product_info[0]
+            #price = product_info[1]
+            jsonObject = {'title':title,'price': price,'url':url}
+            print("title: ",title)
+            print("price: ",price)
+            print("url: ",url)
+            json.dump(jsonObject,outfile)
+            outfile.write("\n")
+
+#link_list   = []
 #print(record_list)
-for record in record_list:
-    
-    html_content =  download_page(record)
-    print("html_content: ",html_content) 
-    print ("[*] Retrieved %d bytes for %s" % (len(html_content),record['url']))
-    
-    link_list = extract_external_links(html_content,link_list)
+#for record in record_list:
+#for i in range(1000):
+#    record = record_list[i]
+#    html_content =  download_page(record)
+#    #print("html_content: ",html_content) 
+#    if html_content is None:
+#        continue
+#    print ("[*] Retrieved %d bytes for %s" % (len(html_content),record['url']))
+#    
+#    link_list = extract_external_links(html_content,link_list)
+
     
 
-print ("[*] Total external links discovered: %d" % len(link_list))
-
-with codecs.open("links.csv" ,"wb",encoding="utf-8") as output:
-
-    fields = ["URL"]
-    
-    logger = csv.DictWriter(output,fieldnames=fields)
-    logger.writeheader()
-    
-    for link in link_list:
-        logger.writerow({"URL":link})
+#print ("[*] Total external links discovered: %d" % len(link_list))
+#print("record_list:",record_list)
+#with codecs.open("links.csv" ,"wb",encoding="utf-8") as output:
+#
+#    fields = ["URL"]
+#    
+#    logger = csv.DictWriter(output,fieldnames=fields)
+#    logger.writeheader()
+#    
+#    for link in link_list:
+#        logger.writerow({"URL":link})
