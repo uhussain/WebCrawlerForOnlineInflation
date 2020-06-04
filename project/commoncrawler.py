@@ -9,11 +9,12 @@ import codecs
 
 from bs4 import BeautifulSoup
 
-
+#Usage
+#python project/commoncrawler.py -d https://insightfellows.com/
 #here we are just parsing out our command line arguments and storing the result in our domain variable.
 # parse the command line arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-d","--domain",required=True,help="The domain to target ie. https://www.amazon.com/")
+ap.add_argument("-d","--domain",required=True,help="The domain to target ie. https://insightfellows.com/")
 args = vars(ap.parse_args())
 
 domain = args['domain']
@@ -55,9 +56,6 @@ def download_page(record):
     offset, length = int(record['offset']), int(record['length'])
     offset_end = offset + length - 1
     
-    #print("offset: ",offset)
-    #print("length: ",length)
-    #print("offset_end: ",offset_end)
     # We'll get the file via HTTPS so we don't need to worry about S3 credentials
     # Getting the file on S3 is equivalent however - you can request a Range
     prefix = 'https://commoncrawl.s3.amazonaws.com/'
@@ -67,23 +65,13 @@ def download_page(record):
 
     # The page is stored compressed (gzip) to save space
     # We can extract it using the GZIP library
-    #print(resp.text)
-    #raw_data = StringIO(resp.text)
     raw_data= BytesIO(resp.raw.read())
-    #byte_str = raw_data.getvalue()
-    #print("byte_str: ",byte_str)
-    #text_obj = byte_str.decode('UTF-8')
-    #f = gzip.GzipFile(fileobj=text_obj)
-    #print(type(raw_data))
     f = gzip.GzipFile(fileobj=raw_data)
 
     # What we have now is just the WARC response, formatted:
     data = f.read()
-    #print("length of data: ",len(data))
-    #print("data: ",data)
     response = ""
     warc_input = str(data,'utf-8')
-    #print("data: ",data)
     #print(warc_input)
     if len(warc_input):
         #try:
