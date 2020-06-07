@@ -24,7 +24,8 @@ domain = args['domain']
 #this is a list of all of the Common Crawl indices that we can query for snapshots of the target domain.
 # list of available indices
 #index_list = ["2014-52","2015-06","2015-11","2015-14","2015-18","2015-22","2015-27"]
-index_list = ["2020-16"]
+index_list = ["2019-04"]
+              #,"2019-09","2019-13","2019-18","2019-22","2019-26","2019-30","2019-35","2019-39","2019-43","2019-47","2019-51","2020-05","2020-10","2020-16"]
 #
 # Searches the Common Crawl Index for a domain.
 #
@@ -37,6 +38,7 @@ def search_domain(domain):
         print ("[*] Trying index %s" % index)
         cc_url  = "http://index.commoncrawl.org/CC-MAIN-%s-index?" % index
         cc_url += "url=%s&matchType=domain&output=json" % domain
+        print("cc_url: ",cc_url)
         response = requests.get(cc_url)
         print("responseStatus: ",response.status_code) 
         if response.status_code == 200:
@@ -53,8 +55,8 @@ def search_domain(domain):
 #
 
 def download_page(record):
-    if record['status']!='200':
-        return
+    #if record['status']!='200':
+    #    return
     offset, length = int(record['offset']), int(record['length'])
     offset_end = offset + length - 1
     
@@ -74,7 +76,10 @@ def download_page(record):
     # What we have now is just the WARC response, formatted:
     data = f.read()
     response = ""
-    warc_input = str(data,'utf-8')
+    print(type(data))
+    #print(data)
+    warc_input = data.decode("utf-8","ignore")
+    #warc_input = str(data,'utf-8')
     #print(warc_input)
     if len(warc_input):
         #try:
@@ -86,16 +91,16 @@ def download_page(record):
     print("warc: ", warc)
     print("header: ", header)
     #print("response: ",response)
-    target_url = response.split("WARC-Target-URI: ")[1].split("\n")
-    try:
-        status = re.search('HTTP/1.1(.+?)\n',response).group(1)
-        if '200' in status:
-            print("status: ",status)
-            return response
-    except: 
-        status=''
-        return
-
+    #target_url = response.split("WARC-Target-URI: ")[1].split("\n")
+    #try:
+    #    status = re.search('HTTP/1.1(.+?)\n',response).group(1)
+    #    if '200' in status:
+    #        print("status: ",status)
+    #        return response
+    #except: 
+    #    status=''
+    #    return
+    return response
     ########################WARC Iterator#########
     """
     response="" 
@@ -114,7 +119,7 @@ def download_page(record):
 #
 # Extract links from the HTML  
 #
-def extract_external_links(html_content,link_list):
+def extract_product_links(html_content,link_list):
 
     parser = BeautifulSoup(html_content,"html.parser")
        
@@ -127,7 +132,7 @@ def extract_external_links(html_content,link_list):
             
             if href is not None:
                 
-                if domain not in href:
+                if domain in href and "/dp/" in href:
                     if href not in link_list and href.startswith("http"):
                         print ("[*] Discovered external link: %s" % href)
                         link_list.append(href)
@@ -144,13 +149,18 @@ def extract_product_data(html_content):
     title=""
     if soup.select("#productTitle"):
         title = soup.select("#productTitle")[0].get_text().strip()
+    elif soup.select("#btAsinTitle"):
+        title = soup.select("#btAsinTitle")[0].get_text().strip()
     #product_info.append(title)
     price=""
     if soup.select("#priceblock_saleprice"):
         price = soup.select("#priceblock_saleprice")[0].get_text()
     elif soup.select("#priceblock_ourprice"):
         price = soup.select("#priceblock_ourprice")[0].get_text()
-    return title,price
+    rating=""
+    if soup.select("#acrCustomerReviewText"):
+            rating = (soup.select("#acrCustomerReviewText")[0].get_text().split()[0]) 
+    return title,price,rating
     #print(data)
     #return title
 
@@ -171,45 +181,47 @@ record_list = list(filter(record_is_product,cleaned_record_list))
 
 print("Total pages with products: ",len(record_list))
 
-with open('AmazonProducts.json','w') as outfile:
+link_list   = []
+with open('AmazonProducts.json','a') as outfile:
     #for url in urllist.read().splitlines():
         #data = scrape(url) 
         #print("data: ",data)
+    #for i in range(1):
     for i in range(len(record_list)):
         record = record_list[i]
         html_content =  download_page(record)
+        #print('html: ',html_content)
         if html_content is None:
             continue
-        title,price = extract_product_data(html_content)
+        title,price,rating = extract_product_data(html_content)
         url = record['url']
+        #htmlfile = open("html_content_%s"%i,"w")
+        #htmlfile.writelines(url)
+        #htmlfile.write("\n")
+        #html_out = BeautifulSoup(html_content,"html.parser")
+        #htmlfile.write(html_out.prettify())
+        #htmlfile.close()
+
+        ##Get links of external products on the page
+        #link_list = extract_product_links(html_content,link_list)
+
         #Because I want to see all products with "dp" in their url
         if url:
             #title = product_info[0]
             #price = product_info[1]
-            jsonObject = {'title':title,'price': price,'url':url}
+            if not title:
+                title = url.strip("https://www.amazon.com/").split("/dp")[0]
+            jsonObject = {'title':title,'price': price,'url':url,'ratings':rating}
             print("title: ",title)
             print("price: ",price)
+            print("ratings: ",rating)
             print("url: ",url)
             json.dump(jsonObject,outfile)
             outfile.write("\n")
 
-#link_list   = []
-#print(record_list)
-#for record in record_list:
-#for i in range(1000):
-#    record = record_list[i]
-#    html_content =  download_page(record)
-#    #print("html_content: ",html_content) 
-#    if html_content is None:
-#        continue
-#    print ("[*] Retrieved %d bytes for %s" % (len(html_content),record['url']))
-#    
-#    link_list = extract_external_links(html_content,link_list)
-
-    
 
 #print ("[*] Total external links discovered: %d" % len(link_list))
-#print("record_list:",record_list)
+##print("record_list:",record_list)
 #with codecs.open("links.csv" ,"wb",encoding="utf-8") as output:
 #
 #    fields = ["URL"]
