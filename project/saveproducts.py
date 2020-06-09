@@ -9,7 +9,7 @@ class SaveProducts:
     def __init__ (self,products_buffer):
         self.products_buffer = products_buffer
         ### Save prodct into database
-        self.dynamodb = boto3.resource('dynamodb',endpoint_url="http://localhost:8008")
+        self.dynamodb = boto3.resource('dynamodb')
         self.table = self.dynamodb.create_table(TableName='AmazonProducts_first',
         KeySchema=[
             {
@@ -41,7 +41,7 @@ class SaveProducts:
 
     def put_product(self,title, uid, price,url, rating, dynamodb=None):
         if not dynamodb:
-            dynamodb = boto3.resource('dynamodb', endpoint_url="http://localhost:8008")
+            dynamodb = boto3.resource('dynamodb')
     
         response = self.table.put_item(
             Item = 
