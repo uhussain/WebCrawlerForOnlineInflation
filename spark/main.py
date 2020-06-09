@@ -65,3 +65,15 @@ warc_recs = sqldf.select("warc_filename", "warc_record_offset", "warc_record_len
 
 ###Implement logic from prototype directory here
 
+#mapPartition gets a list of words and 1's.  Filter removes all words that don't start with capital.  reduceByKey combines all a's and gets word count.  sortBy sorts by largest count to smallest. 
+word_counts = warc_recs.mapPartitions(fetch_process_warc_records).filter((lambda a: re.search(r'^[A-Z][a-z]', a[0]))).reduceByKey(lambda a, b: a + b).sortBy(lambda a: a[1], ascending=False)
+
+list= word_counts.take(1000)
+new_list=[]
+for i in list:
+    if i[0].lower() not in nltk.corpus.wordnet.words():  #filters by wordnet library
+        lower_case = Lem.lemmatize(i[0].lower())         #converts any plurals to singular
+        if lower_case not in nltk.corpus.words.words():  #filter by words library
+            new_list.append(i)                           #adds to list.
+
+print(new_list)
