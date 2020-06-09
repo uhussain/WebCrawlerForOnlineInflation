@@ -1,0 +1,48 @@
+Below is the athena statement to search common crawl for websites whose url contain the words "NBA" and "news". 
+The word "news" is recommended to be included in the query so that shopping sites are excluded.
+
+
+SELECT  warc_filename, warc_record_offset, warc_record_length
+FROM "ccindex"."ccindex"
+WHERE crawl = 'CC-MAIN-2020-10'
+  AND subset = 'warc'
+  AND content_languages = 'eng'
+  and position('amazon' in url) != 0
+  and position('/dp/' in url) != 0
+LIMIT 1000
+
+The output has four columns:  Technically, the url is not needed, but is included for reference purposes.
+In the the first website that is crawled:
+https://www.amazon.com/100-Baggers-Stocks-100-1/dp/1621291650   <= it is a match because amazon and /dp/ are in the url.
+The s3 location of the website is in the file:  s3://commoncrawl/crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00535.warc.gz
+This file contains many websites, but to reference it, the warc_record_offset: 651369716 and warc_record_length: 110549 are used.
+
+In the next step, Spark will open the file at the 651369716 line and pull the next 110549 lines.
+
+Sample output:
+url,warc_filename,warc_record_offset,warc_record_length
+"https://www.amazon.com/100-Baggers-Stocks-100-1/dp/1621291650","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00535.warc.gz","651369716","110549"
+"https://www.amazon.com/100-Pure-Sweet-Almond-Oil/dp/B07345BPSG","crawl-data/CC-MAIN-2020-10/segments/1581875143635.54/warc/CC-MAIN-20200218055414-20200218085414-00142.warc.gz","649926622","105810"
+"https://www.amazon.com/1001-Things-Means-Boomer-Now/dp/B002UXS2GO","crawl-data/CC-MAIN-2020-10/segments/1581875144058.43/warc/CC-MAIN-20200219061325-20200219091325-00266.warc.gz","648153012","87332"
+"https://www.amazon.com/12-Hours-Havana-Build-perfect-ebook/dp/B06XYRP6HW","crawl-data/CC-MAIN-2020-10/segments/1581875144979.91/warc/CC-MAIN-20200220131529-20200220161529-00228.warc.gz","650024075","99316"
+"https://www.amazon.com/1632-Ring-Fire-Eric-Flint/dp/0671319728","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00075.warc.gz","640702133","108630"
+"https://www.amazon.com/1633-Ring-Fire-Eric-Flint/dp/0743471555","crawl-data/CC-MAIN-2020-10/segments/1581875145621.28/warc/CC-MAIN-20200221233354-20200222023354-00389.warc.gz","646893740","108039"
+"https://www.amazon.com/21-Bridges-Blu-ray-Chadwick-Boseman/dp/B081KQHB9M","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00020.warc.gz","651013894","95999"
+"https://www.amazon.com/2Sides-Side-Clean-Jason-Derulo/dp/B07ZWPGB6W","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00347.warc.gz","647362439","78456"
+"https://www.amazon.com/303-230371-Instant-Windshield-Washer/dp/B000FF76KM","crawl-data/CC-MAIN-2020-10/segments/1581875146186.62/warc/CC-MAIN-20200226023658-20200226053658-00008.warc.gz","629589578","121473"
+"https://www.amazon.com/360fly-Capable-Action-Video-Camera/dp/B074KKVM2N","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00553.warc.gz","651727800","139935"
+"https://www.amazon.com/365-Everyday-Value-Veggie-Straws/dp/B074H51HD3","crawl-data/CC-MAIN-2020-10/segments/1581875147647.2/warc/CC-MAIN-20200228200903-20200228230903-00084.warc.gz","619510434","104555"
+"https://www.amazon.com/3GPlus-Electric-Fireplace-Recessed-Changeable/dp/B07CHWB66K","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00203.warc.gz","642554797","129408"
+"https://www.amazon.com/666-Park-Avenue-Novel-Novels-ebook/dp/B004HD62JE","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00214.warc.gz","660060102","111433"
+"https://www.amazon.com/7th-U-Boat-Flotilla-Atlantic-Spearhead/dp/0711029571","crawl-data/CC-MAIN-2020-10/segments/1581875146186.62/warc/CC-MAIN-20200226023658-20200226053658-00559.warc.gz","628525564","85863"
+"https://www.amazon.com/82-229-6-Inch-Stainless-Concrete-Groover/dp/B008DRMWDK","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00206.warc.gz","651289302","104375"
+"https://www.amazon.com/9527-Product-Sticker-Shipping-Address/dp/B06WVYGWMD","crawl-data/CC-MAIN-2020-10/segments/1581875146186.62/warc/CC-MAIN-20200226023658-20200226053658-00491.warc.gz","628676022","126361"
+"https://www.amazon.com/97D-LK0-Sector-Ninety-seven-Saga-ebook/dp/B003BVJ0TC","crawl-data/CC-MAIN-2020-10/segments/1581875143635.54/warc/CC-MAIN-20200218055414-20200218085414-00186.warc.gz","633145301","90071"
+"https://www.amazon.com/Abbey-Rowe/dp/B07J1TGL3W","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00501.warc.gz","654213580","71736"
+"https://www.amazon.com/ABC-Affirmations-Melissa-Irene-ebook/dp/B081422N9P","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00415.warc.gz","644480819","83400"
+"https://www.amazon.com/acegoo-Recessed-Ceiling-Aluminum-Downlights/dp/B012KCNN5O","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00480.warc.gz","648294750","124146"
+"https://www.amazon.com/Acer-PT715-51-71W9-Ultra-Thin-i7-7700HQ-Overclockable/dp/B07CVM156P","crawl-data/CC-MAIN-2020-10/segments/1581875147116.85/warc/CC-MAIN-20200228073640-20200228103640-00274.warc.gz","627050898","143763"
+"https://www.amazon.com/Acrylic-Slurry-Concrete-Charcoal-Color/dp/B009VKS5VG","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00287.warc.gz","653861959","101943"
+"https://www.amazon.com/Action-Research-Inclusive-Education-Participation-ebook/dp/B07RF9FB8W","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00235.warc.gz","660062731","85698"
+"https://www.amazon.com/adidas-Womens-Cloudfoam-Pure-Running/dp/B071NZZW3K","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00230.warc.gz","642051485","115280"
+"https://www.amazon.com/adidas-Womens-Ultraboost-19/dp/B07D9FTZGK","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00472.warc.gz","640706573","139869"

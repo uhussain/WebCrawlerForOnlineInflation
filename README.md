@@ -16,11 +16,23 @@ inflation for different products and set plans for the future accordingly. A sam
 the results is temporarily displayed at [visual](somevisualization). A recording of the WebUI is also available [here](X). 
 
 # Pipeline
-The data will be ingested from Amazon S3 and AWS Steps will be used for scheduling the batch processing tasks corresponding to each month of the Common Crawl data. 
-Then Apache Spark will be used to process and aggregate the data in parquet files and finally Apache Zeppelin will be used to gain insights from the processed 
-data in a user-friendly way.
+Run AWS Athena queries as listed in step 3) below on each month of the Common Crawl data in S3 and save output in the form of csv file in s3 bucket for each month. 
+Then Apache Spark will be used to process each month data using the csv file output from Athena to collect product information for each month of crawl
+data (hence collecting product information over time) in S3. Apache Zeppelin/Suitable visualization tool will then be used to potentially track products and prices 
+across different months from the last step.
 
 # Requirements
+
+1)  S3:  Set up and S3 bucket.  In this case:  s3://athena-east-2-usama/
+2)  Athena:  Open Athena on AWS.  Follow the instructions to set up "Running SQL Queries with Athena" here:  https://commoncrawl.org/2018/03/index-to-warc-files-and-urls-in-columnar-format/
+3)  Run Athena with the example in https://github.com/uhussain/WebCrawlerForOnlineInflation/tree/development/athena/athena_instructions.txt
+4)  Start EMR in Amazon with Spark and Hadoop.  SSH in.
+5)  Add the following to ~/.bashrc and source ~/.bashrc:
+export SPARK_HOME=/usr/lib/spark
+export PYTHONPATH=$SPARK_HOME/python/lib/py4j-0.10.7-src.zip:$PYTHONPATH  
+export PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/build:$PYTHONPATH
+6)  Install the following on EMR (both master and workers) with "pip install --user":  warcio, boto3, bs4, nltk 
+7)  Execute main.py in master node.
 
 Languages 
 * Bash
@@ -29,8 +41,9 @@ Languages
 
 Technologies
 * Spark
-* AWS Steps/Airflow (Undecided) 
-* Zeppelin
+* AWS Athena
+* Zeppelin/Visualization tool
+* Amazon DynamoDB
 
 Third-Party Libraries
 * AWS CLI
@@ -47,11 +60,13 @@ Currently using only one master node and one core node (can be scaled up)
 # Repository Structure and Run Instructions
 
 
-`./airflow/` will contain the scheduling scripts.
+`./athena/` contains instructions on how to query common crawl data with AWS Athena .
 
-`./project/` will contain all configuration files and scripts for the project
+`./prototype/` contains all python configuration files and scripts for running the project locally and output product info to a local amazon dynamoDB table
 
-`./frontendapp/` will contain zeppelin notebooks to visualize results and trends in pricing from the s3,airflow,spark pipeline
+`./spark/` contains the main.py spark script to launch spark jobs using the output from athena query
+
+`./frontendapp/` will contain zeppelin notebooks to visualize results and trends in pricing from output tables saved in s3
 
 
 
