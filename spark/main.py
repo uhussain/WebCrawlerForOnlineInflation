@@ -89,7 +89,7 @@ session = SparkSession.builder.getOrCreate()  #Create Spark Session
 #sqldf = session.read.format("csv").option("header", True).option("inferSchema", True).load("s3://athena-east-2-usama/Unsaved/2020/06/09/112be0b3-7589-4b70-a240-10d781c28b60.csv")
 
 #Read parquet from athena query output
-sqldf = session.read.format("parquet").option("header", True).option("inferSchema", True).load('s3://athena-east-2-usama/wal_query_2/*')
+sqldf = session.read.format("parquet").option("header", True).option("inferSchema", True).load('s3://athena-east-2-usama/Wal_query_2020_10_v2/*')
 
 #Read locally
 #sqldf = session.read.format("csv").option("header", True).option("inferSchema", True).load("walmart.csv")
@@ -108,9 +108,11 @@ word_pattern = re.compile('\$+', re.UNICODE)
 #word_counts = warc_recs.mapPartitions(fetch_process_warc_records).filter((lambda a: re.search(r'^[A-Z][a-z]', a[0]))).reduceByKey(lambda a, b: a + b).sortBy(lambda a: a[1], ascending=False)
 #print("Rdd: ",word_counts)
 
-#filter on all products that have title None
-products= warc_recs.mapPartitions(fetch_process_warc_records).filter((lambda a: re.search(re.compile('None*'),a[0])))
+#products= warc_recs.mapPartitions(fetch_process_warc_records).filter((lambda a: re.search(re.compile('None*'),a[0])))
 
+#filter on all products that have title None
+## Filter out duplicates with distinct()
+products= warc_recs.mapPartitions(fetch_process_warc_records).filter((lambda a: "None" not in a[0])).distinct()
 sqlContext = SQLContext(session)
 
 #word_list= list(word_counts.take(1000))
@@ -132,5 +134,5 @@ schemaProduct = sqlContext.createDataFrame(products,['Product','Price'])
 #=> schema:  DataFrame[_1: string, _2: bigint]
 
 #Write to parquet format
-schemaProduct.write.parquet("s3://athena-east-2-usama/Walmart_Laptops/")
+schemaProduct.write.parquet("s3://athena-east-2-usama/Walmart_Products_2020_10/")
 #print(word_list)
