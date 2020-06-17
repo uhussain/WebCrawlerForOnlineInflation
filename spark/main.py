@@ -16,6 +16,11 @@ from bs4.dammit import EncodingDetector
 #nltk.download('words')
 #from nltk import tokenize
 
+def getComLineArgs():
+        parser.add_argument("--input_file", "-in", type=str, default="", help="Input file name") 
+        parser.add_argument("--output_path", "-o", type=str,default="", help="Output file name")
+    return vars(parser.parse_args())
+
 def html_to_text(page):
     """Converts html page to text
     Args:
@@ -39,6 +44,7 @@ def extract_product_data(html_content):
     #print(soup.prettify())
 
     title=""
+    #Amazon product titles grabbed using html classes
     if soup.select("#productTitle"):
         title = soup.select("#productTitle")[0].get_text().strip()
     elif soup.select("#btAsinTitle"):
@@ -72,6 +78,10 @@ def extract_product_data(html_content):
         for sen in sentences:
             if sen.find("$")!=-1:
                 price = sen[sen.find("$"):]
+                #Walmart product titles grabbed from text
+                if title=="":
+                    if (sen.find("Title")!=-1 and (sen.find("$")-100) > 0):
+                        title=sen[sen.find("Title")+6:sen.find("$")-100]
     rating=""
     if soup.select("#acrCustomerReviewText"):
             rating = (soup.select("#acrCustomerReviewText")[0].get_text().split()[0])
@@ -163,15 +173,21 @@ def fetch_process_warc_records(rows):
 #                    yield title,price
 #            #for word in words:
 #            #    yield word,1   #create key as word and index as 1
+args = getComLineArgs()
+conf = SparkConf().setAll([("spark.executor.memory", "10g"),
+("spark.executor.instances", "8"),
+("spark.executor.cores", "3"),
+("spark.dynamicAllocation.enabled", "true"),])
 
-
-session = SparkSession.builder.getOrCreate()  #Create Spark Session
+session = SparkSession.builder.master("yarn").config(conf=conf).getOrCreate() #Create Spark Session
 
 #Read csv from athena output.  Take rows
 #sqldf = session.read.format("csv").option("header", True).option("inferSchema", True).load("s3://athena-east-2-usama/Unsaved/2020/06/09/112be0b3-7589-4b70-a240-10d781c28b60.csv")
 
 #Read parquet from athena query output
-sqldf = session.read.format("parquet").option("header", True).load('s3://athena-east-2-usama/Amazon_lap_2020_10/*')
+#sqldf = session.read.format("parquet").option("header", True).load('s3://athena-east-2-usama/Amazon_lap_2020_10/*')
+input_path = "s3://walmart-east-2-usama/%s" % (args['input_file'])
+sqldf = session.read.format("parquet").option("header", True).load(input_path+'/*')
 #sqldf = sqldf.repartition(12)
 #Read locally
 #sqldf = session.read.format("csv").option("header", True).option("inferSchema", True).load("walmart.csv")
@@ -179,6 +195,7 @@ sqldf = session.read.format("parquet").option("header", True).load('s3://athena-
 #Create rdd of the 1000 rows selected
 warc_recs = sqldf.select("warc_filename", "warc_record_offset", "warc_record_length").rdd
 
+print("NumOfPartitions: ",warc_recs.getNumPartitions())
 #Look for $ prices in text
 #word_pattern = re.compile('\$+', re.UNICODE)
 
@@ -218,5 +235,9 @@ schemaProduct = sqlContext.createDataFrame(products,['Product','Price','Rating']
 #=> schema:  DataFrame[_1: string, _2: bigint]
 
 #Write to parquet format
-schemaProduct.write.parquet("s3://athena-east-2-usama/Amazon_Products_2020_10/")
+#schemaProduct.write.parquet("s3://athena-east-2-usama/Amazon_Products_2018-47/")
+output_path = "s3://output-east-2-usama/%s/" % (args['output_path'])
+schemaProduct.write.csv(output_path)
+#Write to csv format
+#schemaProduct.write.csv("s3://output-east-2-usama/Walmart_laptops_2019_09/")
 #print(word_list)
