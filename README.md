@@ -7,25 +7,31 @@
 
 
 # Introduction
-**Trends in pricing and a measure of online inflation: Visualizing history of online price inflation using the Common Crawl**
+**Price Crawler: Tracking Price Inflation**
 
-This is a project during the Insight Data Engineering Program (New York, 20B Session). The goal of this project is to scrape product information, descriptions, 
-categories and subcategories, storing the data in an appropriate (relational or NOSql) database for easy retrieval and aggregation. The program uses 
-a subset (~XTB) of the [Common Crawl](https://commoncrawl.org/), an archive of web page content. The results can be used to help companies measure online price 
-inflation for different products and set plans for the future accordingly. A sample batch job has been executed with a set of database names and the UI with 
-the results is temporarily displayed at [visual](somevisualization). A recording of the WebUI is also available [here](X). 
+This is a project during the Insight Data Engineering Program (New York, 20B Session). The goal of this project is to calculate inflation rates from first principles.
+That means calculating inflation rate using prices of goods and services sold online. In this project, I built a pipleine
+to use petabytes of web page data contained in the [Common Crawl](https://commoncrawl.org/), an archive of web page content to calculate inflation rates. 
+The results can be used to enhance investment strategies or by businesses in deciding the cost of products. A sample batch job has been executed using online 
+laptop prices ($500-$800) and the inflation rate in 2019 is measured to be 4.8% which is more than double the annual inflation rate of 2.3% reported by 
+Bureau of labor statistics for 2019. A recording of the WebUI is also available [here](https://www.youtube.com/watch?v=mNcodsH5254&feature=youtu.be). 
 
 # Pipeline
-Run AWS Athena queries as listed in step 3) below on each month of the Common Crawl data in S3 and save output in the form of csv file in s3 bucket for each month. 
-Then Apache Spark will be used to process each month data using the csv file output from Athena to collect product information for each month of crawl
-data (hence collecting product information over time) in S3. Apache Zeppelin/Suitable visualization tool will then be used to potentially track products and prices 
-across different months from the last step.
+I built a data pipeline that utilizes petabytes of publicly available web page data to **Calculate Inflation rates from first principles (Prices of Products)**
+
+![pipeline](static/crawler_pipeline.png)
+
+1. AWS Athena to query indexed WARC Files using HTTP header information in WARC Files
+    * Scan 0(100 GB) data instead of PB
+2.**Keys** to webpages of interest saved in parquet files on S3
+3. Parquet + WARC input to Spark with distributed processing over O(10 GB) data per job
+4. Cleaning, filtering and aggregating Product and Price tables with Pandas in Python
 
 # Requirements
 
 1)  S3:  Set up and S3 bucket.  In this case:  s3://athena-east-2-usama/
 2)  Athena:  Open Athena on AWS.  Follow the instructions to set up "Running SQL Queries with Athena" here:  https://commoncrawl.org/2018/03/index-to-warc-files-and-urls-in-columnar-format/
-3)  Run Athena with the example in https://github.com/uhussain/WebCrawlerForOnlineInflation/tree/development/athena/athena_instructions.txt
+3)  Run Athena with the example in https://github.com/uhussain/WebCrawlerForOnlineInflation/athena/athena_instructions.txt
 4)  Start EMR in Amazon with Spark and Hadoop.  SSH in.
 5)  Add the following to ~/.bashrc and source ~/.bashrc:
 export SPARK_HOME=/usr/lib/spark
@@ -37,12 +43,12 @@ export PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/build:$PYTHONPATH
 Languages 
 * Bash
 * Python 3.7
-* Scala 2.11.8
+* Pandas
 
 Technologies
 * Spark
 * AWS Athena
-* Zeppelin/Visualization tool
+* Dash/Plotly
 * Amazon DynamoDB
 
 Third-Party Libraries
@@ -55,7 +61,7 @@ It comes with Python version 3.7.6, pyspark version 2.4.5-amzn-0 and Zeppelin 0.
 
 **AWS EMR Clusters Setup**
 
-Currently using only one master node and one core node (can be scaled up)
+Currently using only one master node and two core nodes (can be scaled up)
 
 # Repository Structure and Run Instructions
 
@@ -66,7 +72,13 @@ Currently using only one master node and one core node (can be scaled up)
 
 `./spark/` contains the main.py spark script to launch spark jobs using the output from athena query
 
-`./frontendapp/` will contain zeppelin notebooks to visualize results and trends in pricing from output tables saved in s3
+```
+spark-submit ./spark/main.py -in walmart_laptops_2020 -o walmart_parquet_2020
+```
+
+`./cleaning/`contains python script to clean the output from spark and provide csv file to dashapp/app.py
+
+`./dashapp/` contains a dash app to visualize trends in online prices in laptops across time
 
 
 
