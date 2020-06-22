@@ -27,6 +27,7 @@ I built a data pipeline that utilizes petabytes of publicly available web page d
 2. **Keys** to webpages of interest saved in parquet files on S3
 3. Parquet + WARC input to Spark with distributed processing over O(10 GB) data per job
 4. Cleaning, filtering and aggregating Product and Price tables with Pandas in Python
+5. Plotting and tracking price trends with Dash
 
 # Requirements
 
@@ -71,12 +72,20 @@ Currently using only one master node and two core nodes (can be scaled up)
 `./spark/` contains the main.py spark script to launch spark jobs using the output from athena query
 
 ```
-spark-submit ./spark/main.py -in walmart_laptops_2020 -o walmart_parquet_2020
+spark-submit ./spark/main.py -in walmart_laptops_2018 -o walmart_parquet_2018
 ```
 
 `./pandas/`contains python script to clean the output from spark and provide csv file to dashapp/app.py
 
+```
+python3 pandas/cleaner.py
+```
+
 `./dashapp/` contains a dash app to visualize trends in online prices in laptops across time
+
+```
+python3 dashapp/price_tracker.py
+```
 
 # Development work
 I built a rapid prototype of the pipeline during the first week to understand the scope of the problem and learn textual and HTML content analysis. 
