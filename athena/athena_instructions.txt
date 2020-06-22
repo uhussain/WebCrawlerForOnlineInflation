@@ -1,48 +1,89 @@
-Below is the athena statement to search common crawl for websites whose url contain the words "NBA" and "news". 
-The word "news" is recommended to be included in the query so that shopping sites are excluded.
+Below is the athena statement to search common crawl for websites whose url contain the words "walmart.com" and "laptop". 
+The word "laptop" is recommended to be included in the query so that we can focus on the "laptop" basket of goods.
 
-
-SELECT  warc_filename, warc_record_offset, warc_record_length
+/*save the output AS a parquet*/CREATE TABLE ccindex.walmart_laptops_query_2018
+WITH ( format='PARQUET', external_location='s3://walmart-east-2-usama/walmart_laptops_2018/' ) AS
+SELECT url,
+         warc_filename,
+         warc_record_offset,
+         warc_record_length
 FROM "ccindex"."ccindex"
-WHERE crawl = 'CC-MAIN-2020-10'
-  AND subset = 'warc'
-  AND content_languages = 'eng'
-  and position('amazon' in url) != 0
-  and position('/dp/' in url) != 0
-LIMIT 1000
+WHERE (crawl = 'CC-MAIN-2018-05' OR crawl = 'CC-MAIN-2018-09' OR crawl = 'CC-MAIN-2018-13' OR crawl = 'CC-MAIN-2018-17' OR crawl = 'CC-MAIN-2018-22' 
+       OR crawl = 'CC-MAIN-2018-26' OR crawl = 'CC-MAIN-2018-30' OR crawl = 'CC-MAIN-2018-34' OR crawl = 'CC-MAIN-2018-39' OR crawl = 'CC-MAIN-2018-43'
+       OR crawl = 'CC-MAIN-2018-47' OR crawl = 'CC-MAIN-2018-51')
+        AND position('walmart.com' IN url) != 0
+        AND position('laptop' IN url) != 0
 
 The output has four columns:  Technically, the url is not needed, but is included for reference purposes.
 In the the first website that is crawled:
-https://www.amazon.com/100-Baggers-Stocks-100-1/dp/1621291650   <= it is a match because amazon and /dp/ are in the url.
-The s3 location of the website is in the file:  s3://commoncrawl/crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00535.warc.gz
-This file contains many websites, but to reference it, the warc_record_offset: 651369716 and warc_record_length: 110549 are used.
+http://www.walmart.com/c/kp/laptops-under-1000/250-500-walmart.com?facets=price:$250+-+$500;;retailer:Walmart.com  <= it is a match because "walmart.com"
+and "laptop" are in the url.
 
-In the next step, Spark will open the file at the 651369716 line and pull the next 110549 lines.
+The s3 location of the website is in the file:  s3://commoncrawl/crawl-data/CC-MAIN-2018-13/segments/1521257647280.40/crawldiagnostics/CC-MAIN-20180320033158-20180320053158-00033.warc.gz
+
+This file might contain many webpages, but to focus on our search, the keys warc_record_offset: 14986204 and warc_record_length: 825 are used.
+
+In the next step, Spark will open the file at the 14986204 line and pull the next 825 lines.
 
 Sample output:
 url,warc_filename,warc_record_offset,warc_record_length
-"https://www.amazon.com/100-Baggers-Stocks-100-1/dp/1621291650","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00535.warc.gz","651369716","110549"
-"https://www.amazon.com/100-Pure-Sweet-Almond-Oil/dp/B07345BPSG","crawl-data/CC-MAIN-2020-10/segments/1581875143635.54/warc/CC-MAIN-20200218055414-20200218085414-00142.warc.gz","649926622","105810"
-"https://www.amazon.com/1001-Things-Means-Boomer-Now/dp/B002UXS2GO","crawl-data/CC-MAIN-2020-10/segments/1581875144058.43/warc/CC-MAIN-20200219061325-20200219091325-00266.warc.gz","648153012","87332"
-"https://www.amazon.com/12-Hours-Havana-Build-perfect-ebook/dp/B06XYRP6HW","crawl-data/CC-MAIN-2020-10/segments/1581875144979.91/warc/CC-MAIN-20200220131529-20200220161529-00228.warc.gz","650024075","99316"
-"https://www.amazon.com/1632-Ring-Fire-Eric-Flint/dp/0671319728","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00075.warc.gz","640702133","108630"
-"https://www.amazon.com/1633-Ring-Fire-Eric-Flint/dp/0743471555","crawl-data/CC-MAIN-2020-10/segments/1581875145621.28/warc/CC-MAIN-20200221233354-20200222023354-00389.warc.gz","646893740","108039"
-"https://www.amazon.com/21-Bridges-Blu-ray-Chadwick-Boseman/dp/B081KQHB9M","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00020.warc.gz","651013894","95999"
-"https://www.amazon.com/2Sides-Side-Clean-Jason-Derulo/dp/B07ZWPGB6W","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00347.warc.gz","647362439","78456"
-"https://www.amazon.com/303-230371-Instant-Windshield-Washer/dp/B000FF76KM","crawl-data/CC-MAIN-2020-10/segments/1581875146186.62/warc/CC-MAIN-20200226023658-20200226053658-00008.warc.gz","629589578","121473"
-"https://www.amazon.com/360fly-Capable-Action-Video-Camera/dp/B074KKVM2N","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00553.warc.gz","651727800","139935"
-"https://www.amazon.com/365-Everyday-Value-Veggie-Straws/dp/B074H51HD3","crawl-data/CC-MAIN-2020-10/segments/1581875147647.2/warc/CC-MAIN-20200228200903-20200228230903-00084.warc.gz","619510434","104555"
-"https://www.amazon.com/3GPlus-Electric-Fireplace-Recessed-Changeable/dp/B07CHWB66K","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00203.warc.gz","642554797","129408"
-"https://www.amazon.com/666-Park-Avenue-Novel-Novels-ebook/dp/B004HD62JE","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00214.warc.gz","660060102","111433"
-"https://www.amazon.com/7th-U-Boat-Flotilla-Atlantic-Spearhead/dp/0711029571","crawl-data/CC-MAIN-2020-10/segments/1581875146186.62/warc/CC-MAIN-20200226023658-20200226053658-00559.warc.gz","628525564","85863"
-"https://www.amazon.com/82-229-6-Inch-Stainless-Concrete-Groover/dp/B008DRMWDK","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00206.warc.gz","651289302","104375"
-"https://www.amazon.com/9527-Product-Sticker-Shipping-Address/dp/B06WVYGWMD","crawl-data/CC-MAIN-2020-10/segments/1581875146186.62/warc/CC-MAIN-20200226023658-20200226053658-00491.warc.gz","628676022","126361"
-"https://www.amazon.com/97D-LK0-Sector-Ninety-seven-Saga-ebook/dp/B003BVJ0TC","crawl-data/CC-MAIN-2020-10/segments/1581875143635.54/warc/CC-MAIN-20200218055414-20200218085414-00186.warc.gz","633145301","90071"
-"https://www.amazon.com/Abbey-Rowe/dp/B07J1TGL3W","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00501.warc.gz","654213580","71736"
-"https://www.amazon.com/ABC-Affirmations-Melissa-Irene-ebook/dp/B081422N9P","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00415.warc.gz","644480819","83400"
-"https://www.amazon.com/acegoo-Recessed-Ceiling-Aluminum-Downlights/dp/B012KCNN5O","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00480.warc.gz","648294750","124146"
-"https://www.amazon.com/Acer-PT715-51-71W9-Ultra-Thin-i7-7700HQ-Overclockable/dp/B07CVM156P","crawl-data/CC-MAIN-2020-10/segments/1581875147116.85/warc/CC-MAIN-20200228073640-20200228103640-00274.warc.gz","627050898","143763"
-"https://www.amazon.com/Acrylic-Slurry-Concrete-Charcoal-Color/dp/B009VKS5VG","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00287.warc.gz","653861959","101943"
-"https://www.amazon.com/Action-Research-Inclusive-Education-Participation-ebook/dp/B07RF9FB8W","crawl-data/CC-MAIN-2020-10/segments/1581875143695.67/warc/CC-MAIN-20200218120100-20200218150100-00235.warc.gz","660062731","85698"
-"https://www.amazon.com/adidas-Womens-Cloudfoam-Pure-Running/dp/B071NZZW3K","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00230.warc.gz","642051485","115280"
-"https://www.amazon.com/adidas-Womens-Ultraboost-19/dp/B07D9FTZGK","crawl-data/CC-MAIN-2020-10/segments/1581875143784.14/warc/CC-MAIN-20200218150621-20200218180621-00472.warc.gz","640706573","139869"
+http://www.walmart.com/c/kp/laptops-under-1000/250-500-walmart.com?facets=price:$250+-+$500;;retailer:Walmart.com,crawl-data/CC-MAIN-2018-13/segments/1521257647280.40/crawldiagnostics/CC-MAIN-20180320033158-20180320053158-00033.warc.gz,14986204,825
+https://www.walmart.com/c/kp/laptops-under-1000/250-500-walmart.com?facets=price:$250+-+$500;;retailer:Walmart.com,crawl-data/CC-MAIN-2018-13/segments/1521257647280.40/crawldiagnostics/CC-MAIN-20180320033158-20180320053158-00480.warc.gz,23789580,1552
+http://www.walmart.com/c/kp/laptops-under-1000/4-5-stars?facets=customer_rating:4+-+5+Stars&sort=4,crawl-data/CC-MAIN-2018-13/segments/1521257651481.98/crawldiagnostics/CC-MAIN-20180325005509-20180325025509-00254.warc.gz,15767471,817
+https://www.walmart.com/c/kp/laptops-under-1000/4-5-stars?facets=customer_rating:4+-+5+Stars&sort=4,crawl-data/CC-MAIN-2018-13/segments/1521257651481.98/crawldiagnostics/CC-MAIN-20180325005509-20180325025509-00063.warc.gz,25077556,1573
+http://www.walmart.com/c/kp/laptops-under-1000/amd-intel?facets=brand:AMD~~intel,crawl-data/CC-MAIN-2018-13/segments/1521257650188.31/crawldiagnostics/CC-MAIN-20180324093251-20180324113251-00767.warc.gz,15826327,802
+https://www.walmart.com/c/kp/laptops-under-1000/amd-intel?facets=brand:AMD~~intel,crawl-data/CC-MAIN-2018-13/segments/1521257650188.31/crawldiagnostics/CC-MAIN-20180324093251-20180324113251-00000.warc.gz,25626002,1523
+http://www.walmart.com/c/kp/laptops-under-1000/asus-notebooks-wyse?facets=brand:ASUS+Notebooks~~Wyse,crawl-data/CC-MAIN-2018-13/segments/1521257649961.11/crawldiagnostics/CC-MAIN-20180324073738-20180324093738-00343.warc.gz,16373618,819
+https://www.walmart.com/c/kp/laptops-under-1000/asus-notebooks-wyse?facets=brand:ASUS+Notebooks~~Wyse,crawl-data/CC-MAIN-2018-13/segments/1521257649961.11/crawldiagnostics/CC-MAIN-20180324073738-20180324093738-00248.warc.gz,25775303,1542
+http://www.walmart.com/c/kp/laptops-under-1000/hp-logitech?facets=brand:HP~~Logitech,crawl-data/CC-MAIN-2018-13/segments/1521257648178.42/crawldiagnostics/CC-MAIN-20180323044127-20180323064127-00195.warc.gz,16941809,810
+https://www.walmart.com/c/kp/laptops-under-1000/hp-logitech?facets=brand:HP~~Logitech,crawl-data/CC-MAIN-2018-13/segments/1521257648178.42/crawldiagnostics/CC-MAIN-20180323044127-20180323064127-00260.warc.gz,25942161,1562
+http://www.walmart.com/c/kp/laptops-under-1000/page/1?sort_by=7,crawl-data/CC-MAIN-2018-13/segments/1521257646602.39/crawldiagnostics/CC-MAIN-20180319062143-20180319082143-00313.warc.gz,14853402,795
+https://www.walmart.com/c/kp/laptops-under-1000/page/1?sort_by=7,crawl-data/CC-MAIN-2018-13/segments/1521257646602.39/crawldiagnostics/CC-MAIN-20180319062143-20180319082143-00088.warc.gz,24745986,1456
+http://www.walmart.com/c/kp/laptops-under-1000/toshiba-walmart.com?facets=brand:Toshiba;;retailer:Walmart.com,crawl-data/CC-MAIN-2018-13/segments/1521257647885.78/crawldiagnostics/CC-MAIN-20180322131741-20180322151741-00547.warc.gz,15778417,815
+https://www.walmart.com/c/kp/laptops-under-1000/toshiba-walmart.com?facets=brand:Toshiba;;retailer:Walmart.com,crawl-data/CC-MAIN-2018-13/segments/1521257647885.78/crawldiagnostics/CC-MAIN-20180322131741-20180322151741-00546.warc.gz,24866740,1632
+http://www.walmart.com/c/kp/laptops-under-1000/Toshiba?sort_by=5&fn=brand~ASUS%20Notebooks,crawl-data/CC-MAIN-2018-13/segments/1521257645824.5/crawldiagnostics/CC-MAIN-20180318145821-20180318165821-00383.warc.gz,15590750,815
+https://www.walmart.com/c/kp/laptops-under-1000/Toshiba?sort_by=5&fn=brand~ASUS%20Notebooks,crawl-data/CC-MAIN-2018-13/segments/1521257645824.5/crawldiagnostics/CC-MAIN-20180318145821-20180318165821-00128.warc.gz,24004109,1542
+http://www.walmart.com/c/kp/laptops-under-1000/walmart.com/3?facets=retailer:Walmart.com,crawl-data/CC-MAIN-2018-13/segments/1521257647681.81/crawldiagnostics/CC-MAIN-20180321180325-20180321200325-00029.warc.gz,16610518,802
+https://www.walmart.com/c/kp/laptops-under-1000/walmart.com/3?facets=retailer:Walmart.com,crawl-data/CC-MAIN-2018-13/segments/1521257647681.81/crawldiagnostics/CC-MAIN-20180321180325-20180321200325-00670.warc.gz,24748094,6315
+http://www.walmart.com/c/kp/laptops-under-1000?sort_by=6&fn=brand~Intel,crawl-data/CC-MAIN-2018-13/segments/1521257647707.33/crawldiagnostics/CC-MAIN-20180321234947-20180322014947-00644.warc.gz,15340465,799
+https://www.walmart.com/c/kp/laptops-under-1000?sort_by=6&fn=brand~Intel,crawl-data/CC-MAIN-2018-13/segments/1521257647707.33/crawldiagnostics/CC-MAIN-20180321234947-20180322014947-00771.warc.gz,24705287,1572
+http://www.walmart.com/c/kp/laptops-under-1000?sort_by=1&fn=brand~Toshiba%20Notebooks,crawl-data/CC-MAIN-2018-13/segments/1521257647782.95/crawldiagnostics/CC-MAIN-20180322073140-20180322093140-00064.warc.gz,14971194,812
+https://www.walmart.com/c/kp/laptops-under-1000?sort_by=1&fn=brand~Toshiba%20Notebooks,crawl-data/CC-MAIN-2018-13/segments/1521257647782.95/crawldiagnostics/CC-MAIN-20180322073140-20180322093140-00735.warc.gz,23072115,1589
+http://www.walmart.com/c/kp/laptops-under-1000?sort_by=5&fn=system_ram~4%20GB,crawl-data/CC-MAIN-2018-13/segments/1521257650188.31/crawldiagnostics/CC-MAIN-20180324093251-20180324113251-00608.warc.gz,16105562,807
+https://www.walmart.com/c/kp/laptops-under-1000?sort_by=5&fn=system_ram~4%20GB,crawl-data/CC-MAIN-2018-13/segments/1521257650188.31/crawldiagnostics/CC-MAIN-20180324093251-20180324113251-00543.warc.gz,23770422,1542
+http://www.walmart.com/c/kp/netbook-laptops?facets=brand%3AThinkpad,crawl-data/CC-MAIN-2018-13/segments/1521257648177.88/crawldiagnostics/CC-MAIN-20180323024544-20180323044544-00495.warc.gz,16002328,803
+http://www.walmart.com/c/kp/pentium-laptops/12-gb-8-gb?facets=system_ram:12+GB~~8+GB,crawl-data/CC-MAIN-2018-13/segments/1521257649961.11/crawldiagnostics/CC-MAIN-20180324073738-20180324093738-00046.warc.gz,16749806,812
+https://www.walmart.com/c/kp/pentium-laptops/12-gb-8-gb?facets=system_ram:12+GB~~8+GB,crawl-data/CC-MAIN-2018-13/segments/1521257649961.11/crawldiagnostics/CC-MAIN-20180324073738-20180324093738-00111.warc.gz,25523159,1546
+http://www.walmart.com/c/kp/pentium-laptops/1250-1500-150-200?facets=price:$1,250+-+$1,500~~$150+-+$200,crawl-data/CC-MAIN-2018-13/segments/1521257647406.46/crawldiagnostics/CC-MAIN-20180320111412-20180320131412-00603.warc.gz,15163343,822
+https://www.walmart.com/c/kp/pentium-laptops/1250-1500-150-200?facets=price:$1,250+-+$1,500~~$150+-+$200,crawl-data/CC-MAIN-2018-13/segments/1521257647406.46/crawldiagnostics/CC-MAIN-20180320111412-20180320131412-00442.warc.gz,25273543,1548
+http://www.walmart.com/c/kp/pentium-laptops/1250-1500-free-shipping?facets=price:$1,250+-+$1,500;;shipping_offers:Free+Shipping,crawl-data/CC-MAIN-2018-13/segments/1521257650188.31/crawldiagnostics/CC-MAIN-20180324093251-20180324113251-00549.warc.gz,16635292,833
+https://www.walmart.com/c/kp/pentium-laptops/1250-1500-free-shipping?facets=price:$1,250+-+$1,500;;shipping_offers:Free+Shipping,crawl-data/CC-MAIN-2018-13/segments/1521257650188.31/crawldiagnostics/CC-MAIN-20180324093251-20180324113251-00516.warc.gz,25074112,1578
+http://www.walmart.com/c/kp/pentium-laptops/150-200-250-500?facets=price:$150+-+$200~~$250+-+$500,crawl-data/CC-MAIN-2018-13/segments/1521257647322.47/crawldiagnostics/CC-MAIN-20180320072255-20180320092255-00767.warc.gz,15837043,819
+https://www.walmart.com/c/kp/pentium-laptops/150-200-250-500?facets=price:$150+-+$200~~$250+-+$500,crawl-data/CC-MAIN-2018-13/segments/1521257647322.47/crawldiagnostics/CC-MAIN-20180320072255-20180320092255-00158.warc.gz,22853458,1595
+http://www.walmart.com/c/kp/pentium-laptops/150-200-3000+?facets=price:$150+-+$200~~$3,000+,crawl-data/CC-MAIN-2018-13/segments/1521257646176.6/crawldiagnostics/CC-MAIN-20180318204522-20180318224522-00383.warc.gz,16703306,817
+https://www.walmart.com/c/kp/pentium-laptops/150-200-3000+?facets=price:$150+-+$200~~$3,000+,crawl-data/CC-MAIN-2018-13/segments/1521257646176.6/crawldiagnostics/CC-MAIN-20180318204522-20180318224522-00542.warc.gz,22419882,1557
+http://www.walmart.com/c/kp/pentium-laptops/2-2.9-stars-amd?facets=customer_rating:2+-+2.9+Stars;;processor_type:AMD,crawl-data/CC-MAIN-2018-13/segments/1521257646636.25/crawldiagnostics/CC-MAIN-20180319081701-20180319101701-00241.warc.gz,15941844,829
+https://www.walmart.com/c/kp/pentium-laptops/2-2.9-stars-amd?facets=customer_rating:2+-+2.9+Stars;;processor_type:AMD,crawl-data/CC-MAIN-2018-13/segments/1521257646636.25/crawldiagnostics/CC-MAIN-20180319081701-20180319101701-00242.warc.gz,23571329,1560
+http://www.walmart.com/c/kp/pentium-laptops/250-500-8-gb?facets=price:$250+-+$500;;system_ram:8+GB,crawl-data/CC-MAIN-2018-13/segments/1521257648226.72/crawldiagnostics/CC-MAIN-20180323122312-20180323142312-00691.warc.gz,15540039,822
+https://www.walmart.com/c/kp/pentium-laptops/250-500-8-gb?facets=price:$250+-+$500;;system_ram:8+GB,crawl-data/CC-MAIN-2018-13/segments/1521257648226.72/crawldiagnostics/CC-MAIN-20180323122312-20180323142312-00500.warc.gz,24837804,1625
+http://www.walmart.com/c/kp/pentium-laptops/250gb-under-200-250?facets=hard_drive_size:250GB+&+Under;;price:$200+-+$250,crawl-data/CC-MAIN-2018-13/segments/1521257645538.8/crawldiagnostics/CC-MAIN-20180318052202-20180318072202-00286.warc.gz,15694312,843
+https://www.walmart.com/c/kp/pentium-laptops/250gb-under-200-250?facets=hard_drive_size:250GB+&+Under;;price:$200+-+$250,crawl-data/CC-MAIN-2018-13/segments/1521257645538.8/crawldiagnostics/CC-MAIN-20180318052202-20180318072202-00029.warc.gz,24407772,1585
+http://www.walmart.com/c/kp/pentium-laptops/4-5-stars/3?facets=customer_rating:4+-+5+Stars,crawl-data/CC-MAIN-2018-13/segments/1521257646636.25/crawldiagnostics/CC-MAIN-20180319081701-20180319101701-00499.warc.gz,16816815,813
+https://www.walmart.com/c/kp/pentium-laptops/4-5-stars/3?facets=customer_rating:4+-+5+Stars,crawl-data/CC-MAIN-2018-13/segments/1521257646636.25/crawldiagnostics/CC-MAIN-20180319081701-20180319101701-00596.warc.gz,23300778,6322
+http://www.walmart.com/c/kp/pentium-laptops/4-gb-ultrabook?facets=system_ram:4+GB;;type:Ultrabook,crawl-data/CC-MAIN-2018-13/segments/1521257649627.3/crawldiagnostics/CC-MAIN-20180324015136-20180324035136-00486.warc.gz,16260141,816
+https://www.walmart.com/c/kp/pentium-laptops/4-gb-ultrabook?facets=system_ram:4+GB;;type:Ultrabook,crawl-data/CC-MAIN-2018-13/segments/1521257649627.3/crawldiagnostics/CC-MAIN-20180324015136-20180324035136-00229.warc.gz,24214986,1607
+http://www.walmart.com/c/kp/pentium-laptops/4-gb?facets=system_ram:4+GB&sort=7,crawl-data/CC-MAIN-2018-13/segments/1521257650188.31/crawldiagnostics/CC-MAIN-20180324093251-20180324113251-00549.warc.gz,16636915,806
+https://www.walmart.com/c/kp/pentium-laptops/4-gb?facets=system_ram:4+GB&sort=7,crawl-data/CC-MAIN-2018-13/segments/1521257650188.31/crawldiagnostics/CC-MAIN-20180324093251-20180324113251-00550.warc.gz,23744654,1520
+http://www.walmart.com/c/kp/pentium-laptops/acer-compaq?facets=brand:Acer~~Compaq,crawl-data/CC-MAIN-2018-13/segments/1521257645405.20/crawldiagnostics/CC-MAIN-20180317233618-20180318013618-00433.warc.gz,14725938,805
+https://www.walmart.com/c/kp/pentium-laptops/acer-compaq?facets=brand:Acer~~Compaq,crawl-data/CC-MAIN-2018-13/segments/1521257645405.20/crawldiagnostics/CC-MAIN-20180317233618-20180318013618-00560.warc.gz,24050305,1485
+http://www.walmart.com/c/kp/pentium-laptops/Acer?sort_by=5&fn=price~%24200%20-%20%24250,crawl-data/CC-MAIN-2018-13/segments/1521257645405.20/crawldiagnostics/CC-MAIN-20180317233618-20180318013618-00033.warc.gz,15598936,814
+https://www.walmart.com/c/kp/pentium-laptops/Acer?sort_by=5&fn=price~%24200%20-%20%24250,crawl-data/CC-MAIN-2018-13/segments/1521257645405.20/crawldiagnostics/CC-MAIN-20180317233618-20180318013618-00160.warc.gz,23574075,1526
+http://www.walmart.com/c/kp/pentium-laptops/amd-750-1000?facets=brand:AMD;;price:$750+-+$1,000,crawl-data/CC-MAIN-2018-13/segments/1521257645550.13/crawldiagnostics/CC-MAIN-20180318071715-20180318091715-00694.warc.gz,15038099,820
+https://www.walmart.com/c/kp/pentium-laptops/amd-750-1000?facets=brand:AMD;;price:$750+-+$1,000,crawl-data/CC-MAIN-2018-13/segments/1521257645550.13/crawldiagnostics/CC-MAIN-20180318071715-20180318091715-00247.warc.gz,23544252,1500
+http://www.walmart.com/c/kp/pentium-laptops/amd-home-free?facets=processor_brand:AMD;;shipping_offers:Home+Free,crawl-data/CC-MAIN-2018-13/segments/1521257646176.6/crawldiagnostics/CC-MAIN-20180318204522-20180318224522-00710.warc.gz,15890053,833
+https://www.walmart.com/c/kp/pentium-laptops/amd-home-free?facets=processor_brand:AMD;;shipping_offers:Home+Free,crawl-data/CC-MAIN-2018-13/segments/1521257646176.6/crawldiagnostics/CC-MAIN-20180318204522-20180318224522-00357.warc.gz,22531536,1554
+http://www.walmart.com/c/kp/pentium-laptops/asus-notebooks-toshiba?facets=brand:ASUS+Notebooks~~Toshiba,crawl-data/CC-MAIN-2018-13/segments/1521257646636.25/crawldiagnostics/CC-MAIN-20180319081701-20180319101701-00241.warc.gz,15943471,814
+https://www.walmart.com/c/kp/pentium-laptops/asus-notebooks-toshiba?facets=brand:ASUS+Notebooks~~Toshiba,crawl-data/CC-MAIN-2018-13/segments/1521257646636.25/crawldiagnostics/CC-MAIN-20180319081701-20180319101701-00528.warc.gz,23708392,1546
+http://www.walmart.com/c/kp/pentium-laptops/black-pink?facets=color:Black~~Pink,crawl-data/CC-MAIN-2018-13/segments/1521257647671.73/crawldiagnostics/CC-MAIN-20180321160816-20180321180816-00713.warc.gz,15063314,805
+https://www.walmart.com/c/kp/pentium-laptops/black-pink?facets=color:Black~~Pink,crawl-data/CC-MAIN-2018-13/segments/1521257647671.73/crawldiagnostics/CC-MAIN-20180321160816-20180321180816-00744.warc.gz,23605812,1551
+http://www.walmart.com/c/kp/pentium-laptops/black?facets=color:Black&sort=4,crawl-data/CC-MAIN-2018-13/segments/1521257647280.40/crawldiagnostics/CC-MAIN-20180320033158-20180320053158-00261.warc.gz,15347361,803

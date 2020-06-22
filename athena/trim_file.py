@@ -1,17 +1,25 @@
-import boto3
+import pandas as pd
+import pyarrow.parquet as pq
+import s3fs
+
 """
 This script takes every 100 lines of the AWS file and outputs into local drive.
 """
+bucket="walmart-east-2-usama/"
+path = "walmart_laptops_2018"
+s3 = s3fs.S3FileSystem()
+df = pq.ParquetDataset('s3://'+bucket+path, filesystem=s3).read_pandas().to_pandas()
 
-s3 = boto3.resource('s3')
-obj = s3.Object("athena-east-2-usama", "Unsaved/2020/06/09/112be0b3-7589-4b70-a240-10d781c28b60.csv")
-lines = obj.get()['Body'].read().split()
-spacing=100
+sample = df.head(1000)
 
+sample_output = sample.to_csv("walmart_sample_output.csv",index=False)
 
-with open('new.csv', 'w') as file:
-    count=0
-    for row in lines:
-        if count%100 == 0:
-            file.write(str(row)+"\n")
-        count += 1
+#If you print it to a file and have a quick look
+x = sample.to_string(header=False,
+                  index=False,
+                  index_names=False).split('\n')
+
+rows = [','.join(ele.split()) for ele in x]
+
+for r in rows:
+    print(r)
