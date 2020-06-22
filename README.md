@@ -74,7 +74,7 @@ Currently using only one master node and two core nodes (can be scaled up)
 spark-submit ./spark/main.py -in walmart_laptops_2020 -o walmart_parquet_2020
 ```
 
-`./cleaning/`contains python script to clean the output from spark and provide csv file to dashapp/app.py
+`./pandas/`contains python script to clean the output from spark and provide csv file to dashapp/app.py
 
 `./dashapp/` contains a dash app to visualize trends in online prices in laptops across time
 
