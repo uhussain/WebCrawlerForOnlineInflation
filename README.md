@@ -41,18 +41,17 @@ export PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/build:$PYTHONPATH
 6)  Install the following on EMR (both master and workers) with "pip install --user":  warcio, boto3, bs4, nltk 
 7)  Execute main.py in master node.
 
-Languages 
+**Languages** 
 * Bash
 * Python 3.7
 * Pandas
 
-Technologies
+**Technologies**
 * Spark
 * AWS Athena
 * Dash/Plotly
-* Amazon DynamoDB
 
-Third-Party Libraries
+**Third-Party Libraries**
 * AWS CLI
 
 # Environment Setup
@@ -69,8 +68,6 @@ Currently using only one master node and two core nodes (can be scaled up)
 
 `./athena/` contains instructions on how to query common crawl data with AWS Athena .
 
-`./prototype/` contains all python configuration files and scripts for running the project locally and output product info to a local amazon dynamoDB table
-
 `./spark/` contains the main.py spark script to launch spark jobs using the output from athena query
 
 ```
@@ -81,6 +78,17 @@ spark-submit ./spark/main.py -in walmart_laptops_2020 -o walmart_parquet_2020
 
 `./dashapp/` contains a dash app to visualize trends in online prices in laptops across time
 
+# Development work
+I built a rapid prototype of the pipeline during the first week to understand the scope of the problem and learn textual and HTML content analysis. 
+Ingested data from AWS S3, cleaned and filtered with single-threaded python script and aggregated product information in a local Amazon DyanmoDB database
 
+`./prototype/` contains all python configuration files and scripts for running the project locally and output product info to a local amazon dynamoDB table
 
+Languages 
+* Bash
+* Python 3.7
+
+Technologies
+
+* Amazon DynamoDB
 
