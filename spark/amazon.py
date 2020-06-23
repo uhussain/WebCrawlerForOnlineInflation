@@ -5,8 +5,6 @@ from warcio.archiveiterator import ArchiveIterator
 from io import BytesIO
 def extract_product_data(html_content):
 
-    # Create an Extractor by reading from the YAML file
-    #e = Extractor.from_yaml_file('PokemonShop.yml')
     soup = BeautifulSoup(html_content,"html.parser")
     #print(soup.prettify())
 

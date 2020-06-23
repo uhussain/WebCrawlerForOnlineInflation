@@ -52,10 +52,6 @@ def fetch_process_warc_records(rows):
         for record in ArchiveIterator(record_stream):
             page = record.content_stream().read()
             text = html_to_text(page)
-            #words = map(lambda w: w, word_pattern.findall(text))
-            #result = tokenize.sent_tokenize(text)
-            #sentences = map(lambda s: s,tokenize.sent_tokenize(text))
-            #final = list(filter(lambda x: ('$' in x),result))
             word_pattern = re.compile('\$+', re.UNICODE)
             iterator = word_pattern.finditer(text)
             #list of tuples (start,end) identifying all the places in the text where $ sign appears
@@ -81,8 +77,6 @@ def fetch_process_warc_records(rows):
                         yield title,price
                 else:
                     yield title,price
-            #for word in words:
-            #    yield word,1   #create key as word and index as 1
 
 def main():
 
@@ -96,25 +90,18 @@ def main():
     
     input_path = "s3://walmart-east-2-usama/%s" % (args['input_file'])
     sqldf = session.read.format("parquet").option("header", True).load(input_path+'/*')
-    #sqldf = sqldf.repartition(12)
     
-    #Create rdd of the 1000 rows selected
+    #Create rdd of the 1000 rows selected and manually repartition to avoid skew
     warc_recs = sqldf.select("warc_filename", "warc_record_offset", "warc_record_length").rdd.repartition(40)
     
-    print("NumOfPartitions: ",warc_recs.getNumPartitions())
+    #print("NumOfPartitions: ",warc_recs.getNumPartitions())
     products= warc_recs.mapPartitions(fetch_process_warc_records)
     sqlContext = SQLContext(session)
-    
-    #schemaProduct = sqlContext.createDataFrame(products,['Product','Price','Rating'])
-    
+     
     schemaProduct = sqlContext.createDataFrame(products,['Product','Price'])
     #Write to parquet format
-    #schemaProduct.write.parquet("s3://athena-east-2-usama/Amazon_Products_2018-47/")
     output_path = "s3://output-east-2-usama/%s/" % (args['output_path'])
     schemaProduct.write.parquet(output_path)
-    #Write to csv format
-    #schemaProduct.write.csv("s3://output-east-2-usama/Walmart_laptops_2019_09/")
-    #print(word_list)
 
 if __name__ == '__main__':
     #start_time = time.time()

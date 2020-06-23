@@ -17,11 +17,8 @@ def get_file_names(bucket_name,prefix):
     shortlisted_files = []            
     for obj in objs:
         key = obj['Key']
-        timestamp = obj['LastModified']
         # if key starts with folder name retrieve that key
         if key.startswith(prefix) and "parquet" in key:              
-            # Adding a new key value pair
-            #shortlisted_files.update( {key : timestamp} )
             shortlisted_files.append(key)
     return shortlisted_files
 
